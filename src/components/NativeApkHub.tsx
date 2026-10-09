@@ -12,7 +12,6 @@ import {
   FileCode,
   ArrowRight
 } from 'lucide-react';
-import { downloadDirectApkPackage } from '../utils/apkGenerator';
 import { GITHUB_WORKFLOW_CONTENT } from '../data/androidProjectFiles';
 
 interface NativeApkHubProps {
@@ -26,21 +25,7 @@ export const NativeApkHub: React.FC<NativeApkHubProps> = ({
   isDownloadingZip,
   zipProgress
 }) => {
-  const [isDownloadingApk, setIsDownloadingApk] = useState(false);
-  const [apkProgress, setApkProgress] = useState(0);
   const [githubRepo, setGithubRepo] = useState('');
-
-  const handleDownloadApk = async () => {
-    try {
-      setIsDownloadingApk(true);
-      setApkProgress(0);
-      await downloadDirectApkPackage((p) => setApkProgress(p));
-    } catch (err) {
-      console.error('Failed to download APK package:', err);
-    } finally {
-      setIsDownloadingApk(false);
-    }
-  };
 
   const cleanRepo = githubRepo.trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
 
@@ -67,12 +52,14 @@ export const NativeApkHub: React.FC<NativeApkHubProps> = ({
         {/* Dual Primary CTA Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={handleDownloadApk}
-            disabled={isDownloadingApk}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
+            onClick={() => {
+              navigator.clipboard.writeText(GITHUB_WORKFLOW_CONTENT);
+              alert('Copied .github/workflows/build-apk.yml content to clipboard!');
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-sm"
           >
-            <Download className="w-4 h-4" />
-            <span>{isDownloadingApk ? `Packaging APK (${apkProgress}%)` : 'Download Native APK (app-debug.apk)'}</span>
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Copy Workflow YAML (.yml)</span>
           </button>
 
           <button

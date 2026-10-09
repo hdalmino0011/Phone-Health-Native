@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Smartphone, Download, FileCode, Check } from 'lucide-react';
-import { downloadDirectApkPackage } from '../utils/apkGenerator';
+import { GITHUB_WORKFLOW_CONTENT } from '../data/androidProjectFiles';
 
 interface HeaderProps {
   activeTab: 'scanner' | 'project' | 'actions' | 'benchmark';
@@ -17,17 +17,12 @@ export const Header: React.FC<HeaderProps> = ({
   isDownloading,
   downloadProgress
 }) => {
-  const [isDownloadingApk, setIsDownloadingApk] = useState(false);
+  const [copiedWorkflow, setCopiedWorkflow] = useState(false);
 
-  const handleDownloadApk = async () => {
-    try {
-      setIsDownloadingApk(true);
-      await downloadDirectApkPackage();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsDownloadingApk(false);
-    }
+  const handleCopyWorkflow = () => {
+    navigator.clipboard.writeText(GITHUB_WORKFLOW_CONTENT);
+    setCopiedWorkflow(true);
+    setTimeout(() => setCopiedWorkflow(false), 2500);
   };
 
   return (
@@ -54,20 +49,21 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Quick Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={handleDownloadApk}
-              disabled={isDownloadingApk}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
+              onClick={handleCopyWorkflow}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-sm"
+              title="Copy GitHub Actions build-apk.yml"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>{isDownloadingApk ? 'Building APK...' : 'Download APK (.apk)'}</span>
+              <Check className={`w-3.5 h-3.5 ${copiedWorkflow ? 'text-white' : 'hidden'}`} />
+              <FileCode className={`w-3.5 h-3.5 ${copiedWorkflow ? 'hidden' : 'text-white'}`} />
+              <span>{copiedWorkflow ? 'Copied Workflow YAML!' : 'Copy Workflow (.yml)'}</span>
             </button>
             <button
               onClick={onDownloadZip}
               disabled={isDownloading}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors border border-slate-700 disabled:opacity-50"
             >
-              <FileCode className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isDownloading ? `Exporting (${downloadProgress}%)` : 'Source (.zip)'}</span>
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{isDownloading ? `Exporting (${downloadProgress}%)` : 'Project (.zip)'}</span>
             </button>
           </div>
         </div>
