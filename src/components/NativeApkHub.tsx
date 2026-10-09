@@ -26,6 +26,13 @@ export const NativeApkHub: React.FC<NativeApkHubProps> = ({
   zipProgress
 }) => {
   const [githubRepo, setGithubRepo] = useState('');
+  const [copiedWorkflow, setCopiedWorkflow] = useState(false);
+
+  const copyWorkflow = () => {
+    navigator.clipboard.writeText(GITHUB_WORKFLOW_CONTENT);
+    setCopiedWorkflow(true);
+    setTimeout(() => setCopiedWorkflow(false), 2500);
+  };
 
   const cleanRepo = githubRepo.trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
 
@@ -52,14 +59,11 @@ export const NativeApkHub: React.FC<NativeApkHubProps> = ({
         {/* Dual Primary CTA Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => {
-              navigator.clipboard.writeText(GITHUB_WORKFLOW_CONTENT);
-              alert('Copied .github/workflows/build-apk.yml content to clipboard!');
-            }}
+            onClick={copyWorkflow}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-sm"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Copy Workflow YAML (.yml)</span>
+            <span>{copiedWorkflow ? 'Copied to Clipboard!' : 'Copy Workflow YAML (.yml)'}</span>
           </button>
 
           <button
@@ -122,14 +126,11 @@ export const NativeApkHub: React.FC<NativeApkHubProps> = ({
             </h3>
           </div>
           <button
-            onClick={() => {
-              navigator.clipboard.writeText(GITHUB_WORKFLOW_CONTENT);
-              alert('Copied .github/workflows/build-apk.yml content to clipboard!');
-            }}
+            onClick={copyWorkflow}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors shrink-0"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Copy Workflow YAML for GitHub</span>
+            <span>{copiedWorkflow ? 'Copied to Clipboard!' : 'Copy Workflow YAML for GitHub'}</span>
           </button>
         </div>
 

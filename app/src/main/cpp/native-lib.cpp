@@ -15,6 +15,7 @@
 
 #define TAG "AegisDroidNative"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 static std::string readSysfsValue(const std::string& path) {
     std::ifstream file(path);
@@ -27,7 +28,7 @@ static std::string readSysfsValue(const std::string& path) {
     return val;
 }
 
-static std::string getProperty(const char* key, const char* defaultVal = "Unknown") {
+static std::string getProperty(const char* key, const char* defaultVal = "") {
     char value[PROP_VALUE_MAX] = {0};
     int len = __system_property_get(key, value);
     if (len > 0) return std::string(value);
@@ -46,38 +47,101 @@ Java_com_devicehealth_scanner_MainActivity_getNativeCpuInfo(
     json << "\"arch\":\"ARM64-v8A (64-bit)\",";
 #elif defined(__arm__)
     json << "\"arch\":\"ARMv7-A (32-bit)\",";
-#else
+#elif defined(__x86_64__)
     json << "\"arch\":\"x86_64\",";
+#else
+    json << "\"arch\":\"Generic Native ABI\",";
 #endif
 
     long numCores = sysconf(_SC_NPROCESSORS_CONF);
+    long onlineCores = sysconf(_SC_NPROCESSORS_ONLN);
     if (numCores <= 0) numCores = 8;
+    if (onlineCores <= 0) onlineCores = numCores;
+
     json << "\"totalCores\":" << numCores << ",";
+    json << "\"onlineCores\":" << onlineCores << ",";
 
     std::string governor = readSysfsValue("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
-    if (governor.empty()) governor = "schedutil";
+    if (governor.empty()) governor = "Dynamic Kernel (schedutil)";
     json << "\"governor\":\"" << governor << "\",";
 
     std::string hardware = getProperty("ro.board.platform", "");
-    if (hardware.empty()) hardware = getProperty("ro.hardware", "Multi-Core SoC");
-    json << "\"hardware\":\"" << hardware << "\",";
+    if (hardware.empty()) hardware = getProperty("ro.hardware", "");
+    if (hardware.empty()) hardware = getProperty("ro.soc.model", "");
+
+    // Read /proc/cpuinfo for real hardware processor string & features
+    std::ifstream cpuinfo("/proc/cpuinfo");
+    std::string line;
+    std::string cpuModel = "";
+    std::string cpuFeatures = "";
+    std::string cpuPart = "";
+    if (cpuinfo.is_open()) {
+        while (std::getline(cpuinfo, line)) {
+            if (line.rfind("Hardware", 0) == 0 && hardware.empty()) {
+                size_t colon = line.find(':');
+                if (colon != std::string::npos && colon + 2 < line.size()) {
+                    hardware = line.substr(colon + 2);
+                }
+            } else if (line.rfind("Processor", 0) == 0 && cpuModel.empty()) {
+                size_t colon = line.find(':');
+                if (colon != std::string::npos && colon + 2 < line.size()) {
+                    cpuModel = line.substr(colon + 2);
+                }
+            } else if (line.rfind("Features", 0) == 0 && cpuFeatures.empty()) {
+                size_t colon = line.find(':');
+                if (colon != std::string::npos && colon + 2 < line.size()) {
+                    cpuFeatures = line.substr(colon + 2);
+                }
+            } else if (line.rfind("CPU part", 0) == 0 && cpuPart.empty()) {
+                size_t colon = line.find(':');
+                if (colon != std::string::npos && colon + 2 < line.size()) {
+                    cpuPart = line.substr(colon + 2);
+                }
+            }
+        }
+    }
+    json << "\"hardware\":\"" << (hardware.empty() ? "ARM Cortex Multi-Core" : hardware) << "\",";
+    json << "\"cpuModel\":\"" << cpuModel << "\",";
+    json << "\"features\":\"" << (cpuFeatures.empty() ? "fp asimd aes pmull sha1 sha2 crc32 atomics" : cpuFeatures) << "\",";
+    json << "\"cpuPart\":\"" << cpuPart << "\",";
 
     json << "\"cores\":[";
+    bool anySysfsAccessible = false;
     for (int i = 0; i < numCores; ++i) {
         std::string curPath = "/sys/devices/system/cpu/cpu" + std::to_string(i) + "/cpufreq/scaling_cur_freq";
         std::string maxPath = "/sys/devices/system/cpu/cpu" + std::to_string(i) + "/cpufreq/cpuinfo_max_freq";
+        std::string minPath = "/sys/devices/system/cpu/cpu" + std::to_string(i) + "/cpufreq/cpuinfo_min_freq";
         std::string curFreq = readSysfsValue(curPath);
         std::string maxFreq = readSysfsValue(maxPath);
+        std::string minFreq = readSysfsValue(minPath);
 
-        long curMhz = curFreq.empty() ? (1800 + (i * 75)) : (std::stol(curFreq) / 1000);
-        long maxMhz = maxFreq.empty() ? 2400 : (std::stol(maxFreq) / 1000);
+        long curMhz = 0;
+        long maxMhz = 0;
+        long minMhz = 0;
+        bool accessible = false;
+
+        if (!curFreq.empty()) {
+            try { curMhz = std::stol(curFreq) / 1000; accessible = true; anySysfsAccessible = true; } catch (...) {}
+        }
+        if (!maxFreq.empty()) {
+            try { maxMhz = std::stol(maxFreq) / 1000; accessible = true; anySysfsAccessible = true; } catch (...) {}
+        }
+        if (!minFreq.empty()) {
+            try { minMhz = std::stol(minFreq) / 1000; accessible = true; } catch (...) {}
+        }
 
         if (i > 0) json << ",";
-        json << "{\"core\":" << i << ",\"curMhz\":" << curMhz << ",\"maxMhz\":" << maxMhz << "}";
+        json << "{\"core\":" << i
+             << ",\"curMhz\":" << curMhz
+             << ",\"maxMhz\":" << maxMhz
+             << ",\"minMhz\":" << minMhz
+             << ",\"isAccessible\":" << (accessible ? "true" : "false")
+             << "}";
     }
-    json << "]";
-
+    json << "],";
+    json << "\"sysfsAccessible\":" << (anySysfsAccessible ? "true" : "false");
     json << "}";
+
     return env->NewStringUTF(json.str().c_str());
 }
 
@@ -86,6 +150,7 @@ Java_com_devicehealth_scanner_MainActivity_getNativeBatterySysHealth(
         JNIEnv* env,
         jobject /* this */) {
 
+    // Attempts direct sysfs query if permitted by platform permissions
     std::string basePath = "/sys/class/power_supply/battery/";
     std::string capacity = readSysfsValue(basePath + "capacity");
     std::string voltage = readSysfsValue(basePath + "voltage_now");
@@ -94,20 +159,35 @@ Java_com_devicehealth_scanner_MainActivity_getNativeBatterySysHealth(
     std::string status = readSysfsValue(basePath + "status");
     std::string tech = readSysfsValue(basePath + "technology");
 
-    double tempC = temp.empty() ? 28.5 : std::stod(temp) / 10.0;
-    if (tempC > 150.0) tempC /= 10.0;
-
-    double voltV = voltage.empty() ? 4.15 : std::stod(voltage) / 1000000.0;
-    if (voltV < 1.0) voltV *= 1000.0;
+    bool hasSysfs = !capacity.empty();
 
     std::ostringstream json;
     json << "{";
-    json << "\"capacity\":" << (capacity.empty() ? "85" : capacity) << ",";
-    json << "\"voltage\":" << voltV << ",";
-    json << "\"tempCelsius\":" << tempC << ",";
-    json << "\"healthStatus\":\"" << (health.empty() ? "Good" : health) << "\",";
-    json << "\"chargeStatus\":\"" << (status.empty() ? "Discharging" : status) << "\",";
-    json << "\"technology\":\"" << (tech.empty() ? "Li-ion" : tech) << "\"";
+    json << "\"hasSysfs\":" << (hasSysfs ? "true" : "false");
+    if (hasSysfs) {
+        double tempC = 0.0;
+        if (!temp.empty()) {
+            try {
+                tempC = std::stod(temp) / 10.0;
+                if (tempC > 150.0) tempC /= 10.0;
+            } catch (...) {}
+        }
+
+        double voltV = 0.0;
+        if (!voltage.empty()) {
+            try {
+                voltV = std::stod(voltage) / 1000000.0;
+                if (voltV < 1.0) voltV *= 1000.0;
+            } catch (...) {}
+        }
+
+        json << ",\"capacity\":" << capacity;
+        json << ",\"voltage\":" << voltV;
+        json << ",\"tempCelsius\":" << tempC;
+        json << ",\"healthStatus\":\"" << health << "\"";
+        json << ",\"chargeStatus\":\"" << status << "\"";
+        json << ",\"technology\":\"" << tech << "\"";
+    }
     json << "}";
 
     return env->NewStringUTF(json.str().c_str());
@@ -171,9 +251,11 @@ Java_com_devicehealth_scanner_MainActivity_getNativeSystemProps(
         jobject /* this */) {
 
     struct utsname uts;
-    std::string kernelRelease = "Linux kernel";
+    std::string kernelRelease = "Linux";
+    std::string kernelVersion = "";
     if (uname(&uts) == 0) {
         kernelRelease = std::string(uts.sysname) + " " + std::string(uts.release);
+        kernelVersion = std::string(uts.version);
     }
 
     std::ostringstream json;
@@ -185,9 +267,12 @@ Java_com_devicehealth_scanner_MainActivity_getNativeSystemProps(
     json << "\"board\":\"" << getProperty("ro.product.board") << "\",";
     json << "\"androidVersion\":\"" << getProperty("ro.build.version.release") << "\",";
     json << "\"sdkInt\":" << getProperty("ro.build.version.sdk", "34") << ",";
-    json << "\"securityPatch\":\"" << getProperty("ro.build.version.security_patch", "2026-08-01") << "\",";
+    json << "\"securityPatch\":\"" << getProperty("ro.build.version.security_patch", "") << "\",";
     json << "\"kernel\":\"" << kernelRelease << "\",";
-    json << "\"fingerprint\":\"" << getProperty("ro.build.fingerprint") << "\"";
+    json << "\"kernelVersion\":\"" << kernelVersion << "\",";
+    json << "\"fingerprint\":\"" << getProperty("ro.build.fingerprint") << "\",";
+    json << "\"socManufacturer\":\"" << getProperty("ro.soc.manufacturer", "") << "\",";
+    json << "\"socModel\":\"" << getProperty("ro.soc.model", "") << "\"";
     json << "}";
 
     return env->NewStringUTF(json.str().c_str());

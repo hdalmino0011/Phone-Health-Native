@@ -1,21 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
-    <linearGradient id="bgGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#090d16"/>
-      <stop offset="100%" stop-color="#0f172a"/>
-    </linearGradient>
-    <linearGradient id="accentGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#34d399"/>
+    <linearGradient id="phoneBorder192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
       <stop offset="100%" stop-color="#059669"/>
     </linearGradient>
+    <linearGradient id="pulseGrad192" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="50%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
   </defs>
-  <rect width="192" height="192" rx="42" fill="url(#bgGrad192)"/>
-  <rect x="4" y="4" width="184" height="184" rx="38" fill="none" stroke="#334155" stroke-width="2"/>
-  <path d="M96 28 L148 50 C148 102 126 142 96 160 C66 142 44 102 44 50 Z" 
-        fill="#1e293b" stroke="#10b981" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M70 82 C70 67 82 55 96 55 C110 55 122 67 122 82 Z" fill="url(#accentGrad192)"/>
-  <circle cx="84" cy="72" r="2.5" fill="#090d16"/>
-  <circle cx="108" cy="72" r="2.5" fill="#090d16"/>
-  <path d="M60 110 L80 110 L88 92 L96 128 L104 102 L112 110 L132 110" 
-        fill="none" stroke="#34d399" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Clean White Background -->
+  <rect width="192" height="192" rx="42" fill="#FFFFFF"/>
+  <rect x="2" y="2" width="188" height="188" rx="40" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- Buttons -->
+  <rect x="52" y="60" width="4" height="16" rx="2" fill="#059669"/>
+  <rect x="52" y="80" width="4" height="16" rx="2" fill="#059669"/>
+  <rect x="136" y="68" width="4" height="20" rx="2" fill="#059669"/>
+
+  <!-- Smartphone Body Chassis -->
+  <rect x="56" y="28" width="80" height="136" rx="16" fill="#FFFFFF" stroke="url(#phoneBorder192)" stroke-width="5.5"/>
+
+  <!-- Screen Area -->
+  <rect x="64" y="50" width="64" height="90" rx="8" fill="#F0FDF4" stroke="#A7F3D0" stroke-width="1.5"/>
+
+  <!-- Speaker Slit -->
+  <rect x="86" y="37" width="20" height="3" rx="1.5" fill="#059669"/>
+
+  <!-- Camera -->
+  <circle cx="96" cy="44" r="2.2" fill="#047857"/>
+
+  <!-- Pulse Waveform -->
+  <path d="M 68 95 L 79 95 L 85 79 L 92 111 L 99 85 L 105 101 L 110 95 L 124 95"
+        fill="none"
+        stroke="url(#pulseGrad192)"
+        stroke-width="4.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- Home Pill -->
+  <rect x="82" y="152" width="28" height="3" rx="1.5" fill="#059669"/>
 </svg>
