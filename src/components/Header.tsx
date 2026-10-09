@@ -1,5 +1,6 @@
-import React from 'react';
-import { Smartphone, Download, GitBranch } from 'lucide-react';
+import React, { useState } from 'react';
+import { Smartphone, Download, FileCode, Check } from 'lucide-react';
+import { downloadDirectApkPackage } from '../utils/apkGenerator';
 
 interface HeaderProps {
   activeTab: 'scanner' | 'project' | 'actions' | 'benchmark';
@@ -16,6 +17,19 @@ export const Header: React.FC<HeaderProps> = ({
   isDownloading,
   downloadProgress
 }) => {
+  const [isDownloadingApk, setIsDownloadingApk] = useState(false);
+
+  const handleDownloadApk = async () => {
+    try {
+      setIsDownloadingApk(true);
+      await downloadDirectApkPackage();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsDownloadingApk(false);
+    }
+  };
+
   return (
     <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,10 +43,10 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center gap-2">
                 <span className="font-bold text-base tracking-tight text-white">AegisDroid Health</span>
                 <span className="text-xs text-slate-500">·</span>
-                <span className="text-xs text-emerald-400 font-mono">NDK C++ 17</span>
+                <span className="text-xs text-emerald-400 font-mono">Native C++ NDK</span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">
-                Native Android Hardware Scanner & GitHub Actions CI/CD Exporter
+                Native Android Device Health Scanner &amp; GitHub Actions Artifacts
               </p>
             </div>
           </div>
@@ -40,12 +54,20 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Quick Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={onDownloadZip}
-              disabled={isDownloading}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors shadow-sm disabled:opacity-50"
+              onClick={handleDownloadApk}
+              disabled={isDownloadingApk}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors shadow-sm disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>{isDownloading ? `Exporting (${downloadProgress}%)` : 'Download Android Project (.zip)'}</span>
+              <span>{isDownloadingApk ? 'Building APK...' : 'Download APK (.apk)'}</span>
+            </button>
+            <button
+              onClick={onDownloadZip}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors border border-slate-700 disabled:opacity-50"
+            >
+              <FileCode className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{isDownloading ? `Exporting (${downloadProgress}%)` : 'Source (.zip)'}</span>
             </button>
           </div>
         </div>
