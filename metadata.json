@@ -1,0 +1,6 @@
+{
+  "name": "AegisDroid Health - Native Android C++ Device Health Scanner",
+  "description": "High-performance native Android device health scanner built with C++ NDK, Kotlin, and automated GitHub Actions CI/CD artifact building.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
