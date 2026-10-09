@@ -48,15 +48,19 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Ensure Android Project & C++ NDK Sources Exist
+      - name: Ensure Android Project Sources Exist
         run: |
-          if [ ! -f "app/src/main/cpp/native-lib.cpp" ]; then
-            echo "Initializing Android project structure..."
-            mkdir -p app/src/main/cpp app/src/main/java/com/devicehealth/scanner app/src/main/res/values gradle/wrapper
-            
-            # 1. settings.gradle.kts
-            cat << 'EOF' > settings.gradle.kts
-pluginManagement {
+          python3 - << 'PYEOF'
+          import os
+
+          if not os.path.exists("app/src/main/cpp/native-lib.cpp"):
+              print("Bootstrapping Android native C++ project files...")
+              os.makedirs("app/src/main/cpp", exist_ok=True)
+              os.makedirs("app/src/main/java/com/devicehealth/scanner", exist_ok=True)
+              os.makedirs("gradle/wrapper", exist_ok=True)
+
+              with open("settings.gradle.kts", "w") as f:
+                  f.write('''pluginManagement {
     repositories {
         google()
         mavenCentral()
@@ -72,19 +76,17 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AegisDroidHealth"
 include(":app")
-EOF
+''')
 
-            # 2. build.gradle.kts (root)
-            cat << 'EOF' > build.gradle.kts
-plugins {
+              with open("build.gradle.kts", "w") as f:
+                  f.write('''plugins {
     id("com.android.application") version "8.2.2" apply false
     id("org.jetbrains.kotlin.android") version "1.9.22" apply false
 }
-EOF
+''')
 
-            # 3. app/build.gradle.kts
-            cat << 'EOF' > app/build.gradle.kts
-plugins {
+              with open("app/build.gradle.kts", "w") as f:
+                  f.write('''plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
@@ -124,39 +126,32 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
 }
-EOF
+''')
 
-            # 4. app/src/main/cpp/CMakeLists.txt
-            cat << 'EOF' > app/src/main/cpp/CMakeLists.txt
-cmake_minimum_required(VERSION 3.22.1)
+              with open("app/src/main/cpp/CMakeLists.txt", "w") as f:
+                  f.write('''cmake_minimum_required(VERSION 3.22.1)
 project("aegisdroid")
 add_library(native-lib SHARED native-lib.cpp)
 find_library(log-lib log)
 find_library(android-lib android)
 target_link_libraries(native-lib \${log-lib} \${android-lib})
-EOF
+''')
 
-            # 5. app/src/main/cpp/native-lib.cpp
-            cat << 'EOF' > app/src/main/cpp/native-lib.cpp
-#include <jni.h>
+              with open("app/src/main/cpp/native-lib.cpp", "w") as f:
+                  f.write('''#include <jni.h>
 #include <string>
-#include <fstream>
-#include <sstream>
 #include <unistd.h>
-#include <sys/sysinfo.h>
-#include <sys/system_properties.h>
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_devicehealth_scanner_MainActivity_getNativeCpuInfo(JNIEnv* env, jobject) {
     long cores = sysconf(_SC_NPROCESSORS_CONF);
-    std::string res = "{\"cores\":" + std::to_string(cores > 0 ? cores : 8) + ",\"arch\":\"ARM64\"}";
+    std::string res = "{\\"cores\\":" + std::to_string(cores > 0 ? cores : 8) + ",\\"arch\\":\\"ARM64\\"}";
     return env->NewStringUTF(res.c_str());
 }
-EOF
+''')
 
-            # 6. app/src/main/AndroidManifest.xml
-            cat << 'EOF' > app/src/main/AndroidManifest.xml
-<?xml version="1.0" encoding="utf-8"?>
+              with open("app/src/main/AndroidManifest.xml", "w") as f:
+                  f.write('''<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.BATTERY_STATS" />
@@ -171,11 +166,10 @@ EOF
         </activity>
     </application>
 </manifest>
-EOF
+''')
 
-            # 7. app/src/main/java/com/devicehealth/scanner/MainActivity.kt
-            cat << 'EOF' > app/src/main/java/com/devicehealth/scanner/MainActivity.kt
-package com.devicehealth.scanner
+              with open("app/src/main/java/com/devicehealth/scanner/MainActivity.kt", "w") as f:
+                  f.write('''package com.devicehealth.scanner
 import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -195,9 +189,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(tv)
     }
 }
-EOF
-            echo "Android native C++ sources initialized successfully."
-          fi
+''')
+              print("Bootstrapped Android project structure successfully.")
+          PYEOF
 
       - name: Bootstrap Gradle Wrapper if Missing
         run: |
