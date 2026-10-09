@@ -1,0 +1,85 @@
+name: Build Android Native C++ APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package Native APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Licenses & Install NDK / CMake
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Bootstrap Gradle Wrapper if Missing
+        run: |
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Bootstrapping Gradle wrapper..."
+            mkdir -p gradle/wrapper
+            gradle wrapper --gradle-version 8.2 || true
+          fi
+          chmod +x gradlew || true
+
+      - name: Build Native Debug APK with Gradle & C++ NDK
+        run: |
+          ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Locate Output APK
+        id: apk-path
+        run: |
+          APK=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK" ]; then
+            APK=$(find . -name "*.apk" | head -n 1)
+          fi
+          echo "Found APK: $APK"
+          mkdir -p release-artifacts
+          cp "$APK" release-artifacts/AegisDroid-Health-v1.0.0.apk
+          echo "apk_path=release-artifacts/AegisDroid-Health-v1.0.0.apk" >> $GITHUB_OUTPUT
+
+      - name: Upload APK Artifact to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: AegisDroid-Health-v1.0.0-APK
+          path: ${{ steps.apk-path.outputs.apk_path }}
+          retention-days: 14
+
+      - name: Publish Direct Mobile Download via GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.0
+          name: "AegisDroid Health v1.0.0 - Native C++ APK"
+          body: |
+            ### AegisDroid Health Native Android App
+            Native Android hardware diagnostic suite with C++17 NDK performance.
+            
+            #### Direct Phone Installation:
+            1. Tap `AegisDroid-Health-v1.0.0.apk` below to download directly to your mobile phone.
+            2. Open the file to install (allow "Install unknown apps" if prompted).
+            3. Grant phone state permission to scan battery health, CPU, and hardware.
+          files: ${{ steps.apk-path.outputs.apk_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
