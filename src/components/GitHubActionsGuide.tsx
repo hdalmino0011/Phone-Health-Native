@@ -119,21 +119,21 @@ git push -u origin main
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
           <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <Smartphone className="w-4 h-4 text-emerald-400" />
-              <span>Option 1: Instant Mobile Installation (No GitHub Needed)</span>
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>Option 1: Direct Native APK Download</span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
-              Use the <strong>Direct Phone Installation</strong> bar at the top of this page. You can scan the QR code with your mobile camera and install the app onto your phone home screen in 5 seconds.
+              Tap <strong>&quot;Download Native APK (app-debug.apk)&quot;</strong> in the top header to download the APK file directly to your phone right now.
             </p>
           </div>
 
           <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-white">
               <GitBranch className="w-4 h-4 text-emerald-400" />
-              <span>Option 2: Build Standalone APK on GitHub</span>
+              <span>Option 2: Add Workflow to GitHub Actions</span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
-              Download the project ZIP, push it to your GitHub repository, and GitHub will compile the C++ binaries and give you a downloadable <code className="text-emerald-400 font-mono">.apk</code> artifact and GitHub Release.
+              Click the blue <strong>[New workflow]</strong> button on your GitHub Actions tab, paste our <code className="text-emerald-400 font-mono">build-apk.yml</code>, and GitHub will compile the APK in Artifacts!
             </p>
           </div>
         </div>

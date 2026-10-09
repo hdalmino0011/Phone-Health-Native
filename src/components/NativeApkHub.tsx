@@ -13,6 +13,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { downloadDirectApkPackage } from '../utils/apkGenerator';
+import { GITHUB_WORKFLOW_CONTENT } from '../data/androidProjectFiles';
 
 interface NativeApkHubProps {
   onDownloadProjectZip: () => void;
@@ -121,6 +122,63 @@ export const NativeApkHub: React.FC<NativeApkHubProps> = ({
           <p className="text-[11px] text-slate-400 leading-relaxed">
             Open the <strong>Actions</strong> tab on your repository, click the latest build run, scroll down to the <strong>Artifacts</strong> box at the bottom, and click <code className="text-emerald-400 font-mono">AegisDroid-Health-v1.0.0-APK</code> to download and install on your phone.
           </p>
+        </div>
+      </div>
+
+      {/* Direct Guide for Screenshot: How to add the workflow next to pages-build-deployment */}
+      <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              From Your Screenshot: Why Only &quot;pages-build-deployment&quot; Appears
+            </h3>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(GITHUB_WORKFLOW_CONTENT);
+              alert('Copied .github/workflows/build-apk.yml content to clipboard!');
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors shrink-0"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Copy Workflow YAML for GitHub</span>
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          In your screenshot, your repository currently only has the GitHub Pages deployment workflow.
+          To get the <strong>Build Android Native C++ APK</strong> workflow to appear right there next to it:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-xs text-slate-300">
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+            <div className="text-emerald-400 font-mono font-bold text-[11px] mb-1">1. Click [New workflow]</div>
+            <p className="text-[11px] text-slate-400">
+              Click the blue <strong>[New workflow]</strong> button on your GitHub screen (visible in your screenshot).
+            </p>
+          </div>
+
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+            <div className="text-emerald-400 font-mono font-bold text-[11px] mb-1">2. Choose Custom Setup</div>
+            <p className="text-[11px] text-slate-400">
+              Click the text link: <strong>&quot;set up a workflow yourself -&gt;&quot;</strong>.
+            </p>
+          </div>
+
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+            <div className="text-emerald-400 font-mono font-bold text-[11px] mb-1">3. Name &amp; Paste YAML</div>
+            <p className="text-[11px] text-slate-400">
+              Name the file <code className="text-white font-mono">build-apk.yml</code> and paste the copied YAML.
+            </p>
+          </div>
+
+          <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+            <div className="text-emerald-400 font-mono font-bold text-[11px] mb-1">4. Commit &amp; Get APK</div>
+            <p className="text-[11px] text-slate-400">
+              Click <strong>&quot;Commit changes...&quot;</strong>. The APK will build and appear in your <strong>Artifacts</strong> tab!
+            </p>
+          </div>
         </div>
       </div>
 

@@ -48,6 +48,157 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
 
+      - name: Ensure Android Project & C++ NDK Sources Exist
+        run: |
+          if [ ! -f "app/src/main/cpp/native-lib.cpp" ]; then
+            echo "Initializing Android project structure..."
+            mkdir -p app/src/main/cpp app/src/main/java/com/devicehealth/scanner app/src/main/res/values gradle/wrapper
+            
+            # 1. settings.gradle.kts
+            cat << 'EOF' > settings.gradle.kts
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "AegisDroidHealth"
+include(":app")
+EOF
+
+            # 2. build.gradle.kts (root)
+            cat << 'EOF' > build.gradle.kts
+plugins {
+    id("com.android.application") version "8.2.2" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.22" apply false
+}
+EOF
+
+            # 3. app/build.gradle.kts
+            cat << 'EOF' > app/build.gradle.kts
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+android {
+    namespace = "com.devicehealth.scanner"
+    compileSdk = 34
+    defaultConfig {
+        applicationId = "com.devicehealth.scanner"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0.0"
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17 -O3"
+            }
+        }
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+}
+EOF
+
+            # 4. app/src/main/cpp/CMakeLists.txt
+            cat << 'EOF' > app/src/main/cpp/CMakeLists.txt
+cmake_minimum_required(VERSION 3.22.1)
+project("aegisdroid")
+add_library(native-lib SHARED native-lib.cpp)
+find_library(log-lib log)
+find_library(android-lib android)
+target_link_libraries(native-lib \${log-lib} \${android-lib})
+EOF
+
+            # 5. app/src/main/cpp/native-lib.cpp
+            cat << 'EOF' > app/src/main/cpp/native-lib.cpp
+#include <jni.h>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <unistd.h>
+#include <sys/sysinfo.h>
+#include <sys/system_properties.h>
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_devicehealth_scanner_MainActivity_getNativeCpuInfo(JNIEnv* env, jobject) {
+    long cores = sysconf(_SC_NPROCESSORS_CONF);
+    std::string res = "{\"cores\":" + std::to_string(cores > 0 ? cores : 8) + ",\"arch\":\"ARM64\"}";
+    return env->NewStringUTF(res.c_str());
+}
+EOF
+
+            # 6. app/src/main/AndroidManifest.xml
+            cat << 'EOF' > app/src/main/AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.BATTERY_STATS" />
+    <application
+        android:label="AegisDroid Health"
+        android:theme="@android:style/Theme.DeviceDefault">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+EOF
+
+            # 7. app/src/main/java/com/devicehealth/scanner/MainActivity.kt
+            cat << 'EOF' > app/src/main/java/com/devicehealth/scanner/MainActivity.kt
+package com.devicehealth.scanner
+import android.os.Bundle
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+
+class MainActivity : AppCompatActivity() {
+    companion object {
+        init {
+            System.loadLibrary("native-lib")
+        }
+    }
+    external fun getNativeCpuInfo(): String
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val tv = TextView(this)
+        tv.text = "AegisDroid Health Native C++ Scanner Active"
+        setContentView(tv)
+    }
+}
+EOF
+            echo "Android native C++ sources initialized successfully."
+          fi
+
       - name: Bootstrap Gradle Wrapper if Missing
         run: |
           if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
