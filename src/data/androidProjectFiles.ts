@@ -21,6 +21,9 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build & Package Native APK
@@ -40,39 +43,60 @@ jobs:
       - name: Set up Android SDK & NDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android NDK & CMake
+      - name: Accept Licenses & Install NDK / CMake
         run: |
           yes | sdkmanager --licenses || true
-          sdkmanager "ndk;25.2.9519653" "cmake;3.22.1"
+          sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Make Gradle Wrapper Executable
-        run: chmod +x gradlew || true
+      - name: Bootstrap Gradle Wrapper if Missing
+        run: |
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Bootstrapping Gradle wrapper..."
+            mkdir -p gradle/wrapper
+            gradle wrapper --gradle-version 8.2 || true
+          fi
+          chmod +x gradlew || true
 
       - name: Build Debug APK with C++ NDK
         run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace
-          else
-            gradle assembleDebug --stacktrace
-          fi
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
-      - name: Locate Output APK
+      - name: Prepare APK Output
         id: apk-path
         run: |
-          APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          APK=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -z "$APK" ]; then
-            echo "Searching fallback APK path..."
             APK=$(find . -name "*.apk" | head -n 1)
           fi
-          echo "Found APK at: $APK"
-          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK"
+          mkdir -p release-artifacts
+          cp "$APK" release-artifacts/AegisDroid-Health-v1.0.0.apk
+          echo "apk_path=release-artifacts/AegisDroid-Health-v1.0.0.apk" >> $GITHUB_OUTPUT
 
-      - name: Upload APK Artifact to GitHub
+      - name: Upload APK Artifact to Actions
         uses: actions/upload-artifact@v4
         with:
-          name: AegisDroid-Health-Scanner-debug
+          name: AegisDroid-Health-v1.0.0-APK
           path: \${{ steps.apk-path.outputs.apk_path }}
           retention-days: 14
+
+      - name: Publish Direct Mobile Download via GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.0
+          name: "AegisDroid Health v1.0.0 - Native C++ APK"
+          body: |
+            ### AegisDroid Health Native Android App
+            Native Android hardware diagnostic suite with C++17 NDK performance.
+            
+            #### Direct Phone Installation:
+            1. Tap \`AegisDroid-Health-v1.0.0.apk\` below to download directly to your mobile phone.
+            2. Open the file to install (allow "Install unknown apps" if prompted).
+            3. Grant phone state permission to scan battery health, CPU, and hardware.
+          files: \${{ steps.apk-path.outputs.apk_path }}
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `;
 
 export const NATIVE_CPP_CONTENT = `#include <jni.h>
@@ -900,12 +924,12 @@ High-performance native Android hardware health scanner powered by **C++ NDK (CM
 
 ---
 
-## 🚀 How to Build & Install on Your Phone via GitHub Actions
+## How to Build & Install on Your Phone via GitHub Actions
 
-You don't need Android Studio or a local compiler installed! GitHub Actions builds the native C++ code and packages the APK directly in the cloud:
+You do not need Android Studio or a local compiler installed. GitHub Actions builds the native C++ code and packages the APK directly in the cloud:
 
 ### Step 1: Create a Repository on GitHub
-1. Create a new repository on [GitHub](https://github.com/new) (e.g. \`aegisdroid-health\`).
+1. Create a new repository on GitHub (for example, \`aegisdroid-health\`).
 2. Download the project files using the **Download Android Project (.zip)** button in this app, or clone and push the files:
    \`\`\`bash
    git init
@@ -923,17 +947,16 @@ You don't need Android Studio or a local compiler installed! GitHub Actions buil
 - Assembles the debug APK.
 
 ### Step 3: Download & Install on Mobile
-1. On your phone or computer, open your repository's **Actions** tab on GitHub.
-2. Tap the latest workflow run: **Build Android Native C++ APK**.
-3. Scroll down to the **Artifacts** section.
-4. Download \`AegisDroid-Health-Scanner-debug.zip\`.
-5. Extract the ZIP on your phone to get \`app-debug.apk\`.
-6. Tap the APK to install (enable *"Install unknown apps"* for your browser or file manager when prompted).
-7. Open the app, grant the requested permissions, and watch the native C++ hardware scan run in real time!
+1. Open your repository on your phone.
+2. Go to either:
+   - **Releases** tab: Tap \`AegisDroid-Health-v1.0.0.apk\` for a direct 1-tap download (no GitHub account required).
+   - **Actions** tab: Tap the latest run, scroll to **Artifacts**, and download \`AegisDroid-Health-v1.0.0-APK\`.
+3. Tap the downloaded APK to install (enable *"Install unknown apps"* for your browser or file manager when prompted).
+4. Open the app, grant the requested permissions, and watch the native C++ hardware scan run in real time.
 
 ---
 
-## ⚡ Architecture & C++ NDK Integration
+## Architecture & C++ NDK Integration
 
 - **C++ NDK Core (\`native-lib.cpp\`)**:
   - Reads Linux kernel \`/proc/cpuinfo\` and sysfs \`/sys/devices/system/cpu/cpu*/cpufreq/\` for realtime core clocks.

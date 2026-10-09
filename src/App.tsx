@@ -5,6 +5,7 @@ import { ProjectExplorer } from './components/ProjectExplorer';
 import { GitHubActionsGuide } from './components/GitHubActionsGuide';
 import { StressBenchmarkLab } from './components/StressBenchmarkLab';
 import { ImeiPermissionModal } from './components/ImeiPermissionModal';
+import { InstallAppPrompt } from './components/InstallAppPrompt';
 import { performFullDeviceScan, FullDeviceScanReport } from './utils/deviceScanner';
 import { downloadAndroidProjectZip } from './utils/zipExporter';
 
@@ -57,7 +58,9 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <InstallAppPrompt />
+
         {activeTab === 'scanner' && (
           <LiveScanner
             report={report}

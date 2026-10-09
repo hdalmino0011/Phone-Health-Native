@@ -5,13 +5,14 @@ import {
   CheckCircle2,
   Download,
   Smartphone,
-  ShieldCheck,
   Terminal,
-  HelpCircle,
   Copy,
   Check,
   ExternalLink,
-  ChevronRight
+  AlertCircle,
+  HelpCircle,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 
 interface GitHubActionsGuideProps {
@@ -26,6 +27,7 @@ export const GitHubActionsGuide: React.FC<GitHubActionsGuideProps> = ({
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationStep, setSimulationStep] = useState(0);
   const [copiedCmd, setCopiedCmd] = useState(false);
+  const [userRepoInput, setUserRepoInput] = useState('');
 
   const simulationLogs = [
     'Initializing Ubuntu 22.04 LTS runner environment...',
@@ -36,8 +38,9 @@ export const GitHubActionsGuide: React.FC<GitHubActionsGuideProps> = ({
     'CMake 3.22.1: Building native-lib for ABI arm64-v8a (clang++ -std=c++17 -O3)...',
     'CMake 3.22.1: Building native-lib for ABI armeabi-v7a...',
     'Gradle daemon: Assembling APK [DEX compilation, JNI shared libraries packaging]...',
-    'Output verified: app/build/outputs/apk/debug/app-debug.apk (12.8 MB)',
-    'actions/upload-artifact@v4: Uploaded artifact "AegisDroid-Health-Scanner-debug" successfully!'
+    'Output verified: release-artifacts/AegisDroid-Health-v1.0.0.apk (12.8 MB)',
+    'actions/upload-artifact@v4: Uploaded artifact "AegisDroid-Health-v1.0.0-APK" successfully!',
+    'softprops/action-gh-release@v2: Published release tag v1.0.0 with direct APK download!'
   ];
 
   const handleStartSimulation = () => {
@@ -52,8 +55,11 @@ export const GitHubActionsGuide: React.FC<GitHubActionsGuideProps> = ({
         clearInterval(interval);
         setIsSimulating(false);
       }
-    }, 700);
+    }, 600);
   };
+
+  const cleanRepo = userRepoInput.trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
+  const repoUrl = cleanRepo ? `https://github.com/${cleanRepo}` : '';
 
   const gitCommands = `# 1. Extract downloaded project and initialize git
 git init
@@ -62,7 +68,7 @@ git commit -m "feat: AegisDroid native C++ device health scanner"
 
 # 2. Link your GitHub repo and push
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/aegisdroid-health.git
+git remote add origin ${repoUrl || 'https://github.com/YOUR_USERNAME/aegisdroid-health'}.git
 git push -u origin main
 `;
 
@@ -74,7 +80,7 @@ git push -u origin main
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
+      {/* Top Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -99,9 +105,85 @@ git push -u origin main
         </div>
       </div>
 
+      {/* Crucial Notice: Where is the APK and how does it get built? */}
+      <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-5 shadow-sm space-y-3">
+        <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+          <AlertCircle className="w-4 h-4" />
+          <span>Why Don&apos;t You See the APK Yet?</span>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          GitHub Actions runs inside <strong>your GitHub repository</strong>, not inside this preview window.
+          Because this web container does not have access to your personal GitHub credentials, you have two quick options:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-white">
+              <Smartphone className="w-4 h-4 text-emerald-400" />
+              <span>Option 1: Instant Mobile Installation (No GitHub Needed)</span>
+            </div>
+            <p className="text-slate-400 text-xs leading-relaxed">
+              Use the <strong>Direct Phone Installation</strong> bar at the top of this page. You can scan the QR code with your mobile camera and install the app onto your phone home screen in 5 seconds.
+            </p>
+          </div>
+
+          <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-white">
+              <GitBranch className="w-4 h-4 text-emerald-400" />
+              <span>Option 2: Build Standalone APK on GitHub</span>
+            </div>
+            <p className="text-slate-400 text-xs leading-relaxed">
+              Download the project ZIP, push it to your GitHub repository, and GitHub will compile the C++ binaries and give you a downloadable <code className="text-emerald-400 font-mono">.apk</code> artifact and GitHub Release.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* GitHub Repository Linker */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <GitBranch className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-semibold text-white">Your GitHub Repository Linker</h3>
+          </div>
+          <span className="text-[11px] text-slate-500 font-mono">Direct Artifact Jump</span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <input
+            type="text"
+            value={userRepoInput}
+            onChange={(e) => setUserRepoInput(e.target.value)}
+            placeholder="Enter your repo: e.g. username/aegisdroid-health"
+            className="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+          />
+          {cleanRepo && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <a
+                href={`https://github.com/${cleanRepo}/actions`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg transition-colors border border-slate-700"
+              >
+                <span>Actions Tab</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href={`https://github.com/${cleanRepo}/releases`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 rounded-lg transition-colors border border-emerald-500/30"
+              >
+                <span>Releases (Direct APK)</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 4-Step Pipeline Flow Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Step 1 */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-mono font-bold text-xs mb-3">
@@ -117,7 +199,6 @@ git push -u origin main
           </div>
         </div>
 
-        {/* Step 2 */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-mono font-bold text-xs mb-3">
@@ -125,7 +206,7 @@ git push -u origin main
             </div>
             <h3 className="text-sm font-semibold text-white">C++ NDK Compilation</h3>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              GitHub Actions automatically downloads Android NDK 25 & CMake, compiles <code className="text-blue-400 font-mono">native-lib.cpp</code> with Clang optimization (<code className="font-mono text-slate-300">-O3</code>).
+              GitHub Actions automatically downloads Android NDK 25 & CMake, compiling <code className="text-blue-400 font-mono">native-lib.cpp</code> with Clang optimization (<code className="font-mono text-slate-300">-O3</code>).
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500">
@@ -133,23 +214,21 @@ git push -u origin main
           </div>
         </div>
 
-        {/* Step 3 */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-mono font-bold text-xs mb-3">
               03
             </div>
-            <h3 className="text-sm font-semibold text-white">Artifact Upload</h3>
+            <h3 className="text-sm font-semibold text-white">Artifacts & Releases</h3>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              The workflow uses <code className="text-purple-400 font-mono">actions/upload-artifact@v4</code> to attach <code className="text-slate-300 font-mono">app-debug.apk</code> to the Actions run page.
+              Workflow publishes the APK under both GitHub Actions Artifacts and as a direct public GitHub Release tagged <code className="text-purple-400 font-mono">v1.0.0</code>.
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500">
-            Retention: 14 days in GitHub
+            Direct 1-tap download
           </div>
         </div>
 
-        {/* Step 4 */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
           <div>
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-mono font-bold text-xs mb-3">
@@ -157,11 +236,11 @@ git push -u origin main
             </div>
             <h3 className="text-sm font-semibold text-white">Install on Mobile</h3>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Open your repo's Actions tab on your phone browser, download the artifact ZIP, extract, and tap to install the APK!
+              Open your repo on your phone browser, tap the APK link in Releases, and tap to install!
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500">
-            Allow "Install Unknown Apps"
+            Allow &quot;Install Unknown Apps&quot;
           </div>
         </div>
       </div>
@@ -198,7 +277,7 @@ git push -u origin main
 
           {simulationLogs.slice(0, simulationStep).map((log, index) => {
             const isLast = index === simulationStep - 1 && isSimulating;
-            const isSuccess = index === simulationLogs.length - 1;
+            const isSuccess = index >= simulationLogs.length - 2;
             return (
               <div key={index} className="flex items-start gap-2 py-0.5">
                 <span className="text-slate-600 select-none w-6 text-right">{index + 1}</span>
@@ -212,7 +291,7 @@ git push -u origin main
           {simulationStep >= simulationLogs.length && (
             <div className="mt-3 p-2.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>Artifact ready: AegisDroid-Health-Scanner-debug.zip containing app-debug.apk</span>
+              <span>Artifact ready: AegisDroid-Health-v1.0.0.apk ready for direct phone installation</span>
             </div>
           )}
         </div>
@@ -239,7 +318,7 @@ git push -u origin main
         </pre>
       </div>
 
-      {/* Mobile Installation Details & Unknown Sources */}
+      {/* Mobile Installation Details */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
         <div className="flex items-center gap-2">
           <Smartphone className="w-4 h-4 text-emerald-400" />
@@ -248,16 +327,16 @@ git push -u origin main
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
           <div className="bg-slate-950/60 border border-slate-800/60 p-3.5 rounded-lg space-y-2">
-            <h4 className="font-semibold text-white">1. Download Artifact on Phone</h4>
+            <h4 className="font-semibold text-white">1. Download Directly on Phone</h4>
             <p className="text-slate-400 leading-relaxed">
-              Open Chrome or Samsung Internet on your Android device, navigate to your GitHub repository, tap <strong>Actions</strong>, tap the latest run, scroll down to <strong>Artifacts</strong>, and tap <strong>AegisDroid-Health-Scanner-debug</strong>.
+              Open Chrome or Samsung Internet on your phone, visit your GitHub repository&apos;s <strong>Releases</strong> page, and tap <code className="text-emerald-400 font-mono">AegisDroid-Health-v1.0.0.apk</code>.
             </p>
           </div>
 
           <div className="bg-slate-950/60 border border-slate-800/60 p-3.5 rounded-lg space-y-2">
             <h4 className="font-semibold text-white">2. Allow Unknown Apps</h4>
             <p className="text-slate-400 leading-relaxed">
-              When prompted by Android, go to <em>Settings → Apps → Special app access → Install unknown apps</em>, and toggle <em>Allow from this source</em> for your browser or Files app. Then tap <strong>Install</strong>.
+              When prompted by Android, go to <em>Settings → Apps → Special app access → Install unknown apps</em>, toggle <em>Allow from this source</em> for your browser or Files app, and tap <strong>Install</strong>.
             </p>
           </div>
         </div>

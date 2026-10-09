@@ -9,12 +9,39 @@ export async function downloadAndroidProjectZip(onProgress?: (percent: number) =
     zip.file(file.path, file.content);
   }
 
-  // Add basic gradlew and gradlew.bat stubs
-  const gradlewStub = `#!/bin/sh
-exec gradle "$@"
+  // Add robust gradlew with auto-wrapper bootstrap
+  const gradlewScript = `#!/usr/bin/env sh
+# Gradle wrapper script with automated bootstrap
+set -e
+APP_HOME=$(cd "\$(dirname "\$0")" && pwd)
+WRAPPER_JAR="\$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+
+if [ ! -f "\$WRAPPER_JAR" ]; then
+    echo "Downloading Gradle wrapper jar..."
+    mkdir -p "\$APP_HOME/gradle/wrapper"
+    curl -sLo "\$WRAPPER_JAR" "https://services.gradle.org/distributions/gradle-8.2-bin.zip" || true
+    if command -v gradle >/dev/null 2>&1; then
+        gradle wrapper --gradle-version 8.2
+    fi
+fi
+
+if [ -f "\$WRAPPER_JAR" ]; then
+    exec java -Xmx2048m -jar "\$WRAPPER_JAR" "$@"
+elif command -v gradle >/dev/null 2>&1; then
+    exec gradle "$@"
+else
+    echo "Gradle not installed and wrapper jar missing. Please install gradle or run on GitHub Actions."
+    exit 1
+fi
 `;
-  zip.file('gradlew', gradlewStub);
-  zip.file('gradlew.bat', '@rem Gradle wrapper batch\r\ngradle %*\r\n');
+  zip.file('gradlew', gradlewScript);
+  zip.file('gradlew.bat', '@rem Gradle wrapper batch\r\ncall gradle %*\r\n');
+  zip.file('gradle/wrapper/gradle-wrapper.properties', `distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+`);
 
   // Add .gitignore
   const gitignoreContent = `*.iml
