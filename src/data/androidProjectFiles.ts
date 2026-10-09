@@ -40,13 +40,10 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Set up Android SDK & NDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Licenses & Install NDK / CMake
+      - name: Accept Android SDK Licenses & Install NDK
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Ensure Android Project Sources Exist
         run: |

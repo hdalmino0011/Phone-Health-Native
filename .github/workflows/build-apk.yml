@@ -26,26 +26,27 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Set up Android SDK & NDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Licenses & Install NDK / CMake
+      - name: Accept Android SDK Licenses & Install NDK
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Bootstrap Gradle Wrapper if Missing
+      - name: Ensure Gradle Wrapper
         run: |
           if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Bootstrapping Gradle wrapper..."
+            echo "Generating Gradle wrapper..."
             mkdir -p gradle/wrapper
             gradle wrapper --gradle-version 8.2 || true
           fi
           chmod +x gradlew || true
 
-      - name: Build Native Debug APK with Gradle & C++ NDK
+      - name: Build Native Debug APK with Gradle
         run: |
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          if [ -f "./gradlew" ] && [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            ./gradlew assembleDebug --stacktrace --no-daemon
+          else
+            gradle assembleDebug --stacktrace --no-daemon
+          fi
 
       - name: Locate Output APK
         id: apk-path
